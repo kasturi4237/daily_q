@@ -1,85 +1,164 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
+import 'package:share_plus/share_plus.dart'; // ← Add this to pubspec.yaml
 
-void main() => runApp(DailyQuotesApp());
+void main() {
+  runApp(const DailyQuotesApp());
+}
 
-class DailyQuotesApp extends StatelessWidget {
+class DailyQuotesApp extends StatefulWidget {
+  const DailyQuotesApp({super.key});
+
+  @override
+  State<DailyQuotesApp> createState() => _DailyQuotesAppState();
+}
+
+class _DailyQuotesAppState extends State<DailyQuotesApp> {
+  bool isDarkMode = false;
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Daily Quotes',
-      theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-      ),
-      home: QuotesPage(),
       debugShowCheckedModeBanner: false,
+      theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
+      home: DailyQuotePage(
+        toggleTheme: () {
+          setState(() {
+            isDarkMode = !isDarkMode;
+          });
+        },
+      ),
     );
   }
 }
 
-class QuotesPage extends StatefulWidget {
+class DailyQuotePage extends StatefulWidget {
+  final VoidCallback toggleTheme;
+
+  const DailyQuotePage({super.key, required this.toggleTheme});
+
   @override
-  _QuotesPageState createState() => _QuotesPageState();
+  State<DailyQuotePage> createState() => _DailyQuotePageState();
 }
 
-class _QuotesPageState extends State<QuotesPage> {
-  final List<String> quotes = [
+class _DailyQuotePageState extends State<DailyQuotePage> {
+  List<String> quotes = [
     "Believe you can and you're halfway there.",
-    "Success is not final; failure is not fatal.",
-    "Act as if what you do makes a difference. It does.",
     "Dream big and dare to fail.",
-    "The best way out is always through.",
     "What we think, we become.",
-    "Don't wait. The time will never be just right.",
+    "Success is not in what you have, but who you are.",
+    "Act as if what you do makes a difference. It does.",
+    "With the new day comes new strength and new thoughts.",
+    "The best way to get started is to quit talking and begin doing.",
   ];
 
-  String currentQuote = "";
+  late String currentQuote;
+  List<String> favorites = [];
 
   @override
   void initState() {
     super.initState();
-    _getRandomQuote();
+    currentQuote = quotes[0];
   }
 
-  void _getRandomQuote() {
-    final random = Random();
+  void getNewQuote() {
     setState(() {
-      currentQuote = quotes[random.nextInt(quotes.length)];
+      currentQuote = (quotes..shuffle()).first;
     });
+  }
+
+  void shareQuote() {
+    Share.share(currentQuote);
+  }
+
+  void showFavoritesDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Favorite Quotes"),
+        content: favorites.isEmpty
+            ? const Text("No favorites yet!")
+            : SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: favorites.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(title: Text(favorites[index]));
+                  },
+                ),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("Close"),
+          )
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.deepPurple[50],
       appBar: AppBar(
-        title: Text("Daily Quote"),
-        centerTitle: true,
+        title: const Text("🌟 Daily Quotes"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.brightness_6),
+            onPressed: widget.toggleTheme,
+            tooltip: "Toggle Light/Dark Mode",
+          ),
+        ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                '"$currentQuote"',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.deepPurple[800],
+              const Text("Today's Quote:",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                textAlign: TextAlign.center,
+                child: Text(
+                  '"$currentQuote"',
+                  style: const TextStyle(fontSize: 20, fontStyle: FontStyle.italic),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: _getRandomQuote,
-                child: Text("New Quote"),
-                style: ElevatedButton.styleFrom(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 32.0, vertical: 12.0),
-                  textStyle: TextStyle(fontSize: 18),
-                ),
+              const SizedBox(height: 32),
+              Wrap(
+                spacing: 12,
+                children: [
+                  ElevatedButton(
+                    onPressed: getNewQuote,
+                    child: const Text("🎲 New Quote"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (!favorites.contains(currentQuote)) {
+                        setState(() {
+                          favorites.add(currentQuote);
+                        });
+                      }
+                    },
+                    child: const Text("❤️ Favorite"),
+                  ),
+                  ElevatedButton(
+                    onPressed: showFavoritesDialog,
+                    child: const Text("⭐ View Favorites"),
+                  ),
+                  ElevatedButton(
+                    onPressed: shareQuote,
+                    child: const Text("📤 Share"),
+                  ),
+                ],
               )
             ],
           ),
